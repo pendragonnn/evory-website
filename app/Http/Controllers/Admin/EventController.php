@@ -187,19 +187,26 @@ class EventController extends Controller
 
     public function destroy(Event $event)
     {
+        // Hapus event map file jika ada
         if ($event->event_booth_map && file_exists(public_path($event->event_booth_map))) {
             unlink(public_path($event->event_booth_map));
         }
 
+        // Hapus cover file jika ada
         if ($event->cover && file_exists(public_path($event->cover))) {
             unlink(public_path($event->cover));
         }
 
-        // delete event (booths auto-softdeleted if FK set null)
+        // Hapus semua booths terkait event ini
+        foreach ($event->booths as $booth) {
+            $booth->delete(); // soft delete
+        }
+
+        // Hapus event (soft delete)
         $event->delete();
 
         return redirect()
             ->route('admin.events.index')
-            ->with('success', 'Event successfully deleted!');
+            ->with('success', 'Event and its booths successfully deleted!');
     }
 }
