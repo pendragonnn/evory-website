@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\ProfileController;
@@ -28,6 +29,15 @@ Route::middleware(['auth', 'role:admin'])
 
         Route::resource('events', EventController::class);
 
+        // BOOKINGS ADMIN
+        Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
+        Route::get('bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+
+        // NEW LOGIC (confirm & reject)
+        Route::post('bookings/{booking}/confirm', [BookingController::class, 'confirmPayment'])->name('bookings.confirm');
+        Route::post('bookings/{booking}/reject', [BookingController::class, 'rejectPayment'])->name('bookings.reject');
+
+        Route::delete('bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');
     });
 
 
