@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->string('organizer_name', 150)->nullable();
             $table->text('description')->nullable();
             $table->string('event_booth_map', 255)->nullable();
+            $table->string('cover', 255)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
