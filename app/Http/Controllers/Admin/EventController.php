@@ -11,119 +11,148 @@ use Illuminate\Support\Arr;
 
 class EventController extends Controller
 {
-    public function index()
-    {
-        $events = Event::latest()->get();
+  public function index()
+  {
+    $events = Event::latest()->get();
 
-        return view('admin.events.index', compact('events'));
+    return view('admin.events.index', compact('events'));
+  }
+
+  public function create()
+  {
+    return view('admin.events.form', [
+      'event' => new Event(),
+      'method' => 'POST',
+      'action' => route('admin.events.store'),
+    ]);
+  }
+
+  public function store(Request $request)
+  {
+    $validated = $request->validate([
+      'event_name' => 'required|string|max:200',
+      'location' => 'nullable|string|max:255',
+      'start_date' => 'required|date',
+      'end_date' => 'required|date|after_or_equal:start_date',
+      'organizer_name' => 'nullable|string|max:150',
+      'description' => 'nullable|string',
+      'event_booth_map' => 'nullable|image|mimes:jpg,jpeg,png',
+      'cover' => 'nullable|image|mimes:jpg,jpeg,png',
+    ]);
+
+    // Simpan data event tanpa file dulu
+    $event = Event::create(Arr::except($validated, ['event_booth_map']));
+
+    // Jika ada file map
+    if ($request->hasFile('event_booth_map')) {
+      $extension = $request->file('event_booth_map')->getClientOriginalExtension();
+      $filename = Str::slug($event->event_name) . '_' . $event->id . '.' . $extension;
+
+      $destination = public_path('event_maps');
+
+      if (!file_exists($destination)) {
+        mkdir($destination, 0777, true);
+      }
+
+      $request->file('event_booth_map')->move($destination, $filename);
+
+      $event->update(['event_booth_map' => 'event_maps/' . $filename]);
     }
 
-    public function create()
-    {
-        return view('admin.events.form', [
-            'event' => new Event(),
-            'method' => 'POST',
-            'action' => route('admin.events.store'),
-        ]);
+    if ($request->hasFile('cover')) {
+      $filename = 'cover_' . time() . '.' . $request->cover->extension();
+      $request->cover->move(public_path('event_covers'), $filename);
+      $event->cover = 'event_covers/' . $filename;
     }
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'event_name'     => 'required|string|max:200',
-            'location'       => 'nullable|string|max:255',
-            'start_date'     => 'required|date',
-            'end_date'       => 'required|date|after_or_equal:start_date',
-            'organizer_name' => 'nullable|string|max:150',
-            'description'    => 'nullable|string',
-            'event_booth_map' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ]);
+    return redirect()
+      ->route('admin.events.index')
+      ->with('success', 'Event successfully created!');
+  }
 
-        // Simpan data event tanpa file dulu
-        $event = Event::create(Arr::except($validated, ['event_booth_map']));
+  public function edit(Event $event)
+  {
+    return view('admin.events.form', [
+      'event' => $event,
+      'method' => 'PUT',
+      'action' => route('admin.events.update', $event),
+    ]);
+  }
 
-        // Jika ada file map
-        if ($request->hasFile('event_booth_map')) {
-            $extension = $request->file('event_booth_map')->getClientOriginalExtension();
-            $filename = Str::slug($event->event_name) . '_' . $event->id . '.' . $extension;
+  public function update(Request $request, Event $event)
+  {
+    $validated = $request->validate([
+      'event_name' => 'required|string|max:200',
+      'location' => 'nullable|string|max:255',
+      'start_date' => 'required|date',
+      'end_date' => 'required|date|after_or_equal:start_date',
+      'organizer_name' => 'nullable|string|max:150',
+      'description' => 'nullable|string',
+      'event_booth_map' => 'nullable|image|mimes:jpg,jpeg,png',
+      'cover' => 'nullable|image|mimes:jpg,jpeg,png',
+    ]);
 
-            $destination = public_path('event_maps');
+    if ($request->hasFile('event_booth_map')) {
 
-            if (!file_exists($destination)) {
-                mkdir($destination, 0777, true);
-            }
+      // Hapus file lama jika ada
+      if ($event->event_booth_map && file_exists(public_path($event->event_booth_map))) {
+        unlink(public_path($event->event_booth_map));
+      }
 
-            $request->file('event_booth_map')->move($destination, $filename);
+      $extension = $request->file('event_booth_map')->getClientOriginalExtension();
+      $filename = Str::slug($event->event_name) . '_map_' . $event->id . '.' . $extension;
 
-            $event->update(['event_booth_map' => 'event_maps/' . $filename]);
-        }
+      $destination = public_path('event_maps');
 
-        return redirect()
-            ->route('admin.events.index')
-            ->with('success', 'Event successfully created!');
+      if (!file_exists($destination)) {
+        mkdir($destination, 0777, true);
+      }
+
+      $request->file('event_booth_map')->move($destination, $filename);
+
+      $validated['event_booth_map'] = 'event_maps/' . $filename;
     }
 
-    public function edit(Event $event)
-    {
-        return view('admin.events.form', [
-            'event' => $event,
-            'method' => 'PUT',
-            'action' => route('admin.events.update', $event),
-        ]);
+    if ($request->hasFile('cover')) {
+
+      // Hapus cover lama
+      if ($event->cover && file_exists(public_path($event->cover))) {
+        unlink(public_path($event->cover));
+      }
+
+      $extension = $request->file('cover')->getClientOriginalExtension();
+      $filename = Str::slug($event->event_name) . '_cover_' . $event->id . '.' . $extension;
+
+      $destination = public_path('event_covers');
+
+      if (!file_exists($destination)) {
+        mkdir($destination, 0777, true);
+      }
+
+      $request->file('cover')->move($destination, $filename);
+
+      $validated['cover'] = 'event_covers/' . $filename;
     }
 
-    public function update(Request $request, Event $event)
-    {
-        $validated = $request->validate([
-            'event_name'     => 'required|string|max:200',
-            'location'       => 'nullable|string|max:255',
-            'start_date'     => 'required|date',
-            'end_date'       => 'required|date|after_or_equal:start_date',
-            'organizer_name' => 'nullable|string|max:150',
-            'description'    => 'nullable|string',
-            'event_booth_map' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-        ]);
+    $event->update($validated);
 
-        // Jika upload map baru
-        if ($request->hasFile('event_booth_map')) {
+    return redirect()
+      ->route('admin.events.index')
+      ->with('success', 'Event successfully updated!');
+  }
 
-            // Hapus file lama
-            if ($event->event_booth_map && file_exists(public_path($event->event_booth_map))) {
-                unlink(public_path($event->event_booth_map));
-            }
 
-            // Buat nama file baru
-            $extension = $request->file('event_booth_map')->getClientOriginalExtension();
-            $filename = Str::slug($event->event_name) . '_' . $event->id . '.' . $extension;
-
-            $destination = public_path('event_maps');
-            if (!file_exists($destination)) {
-                mkdir($destination, 0777, true);
-            }
-
-            $request->file('event_booth_map')->move($destination, $filename);
-
-            $validated['event_booth_map'] = 'event_maps/' . $filename;
-        }
-
-        $event->update($validated);
-
-        return redirect()
-            ->route('admin.events.index')
-            ->with('success', 'Event successfully updated!');
+  public function destroy(Event $event)
+  {
+    // Hapus file map jika ada
+    if ($event->event_booth_map && file_exists(public_path($event->event_booth_map))) {
+      unlink(public_path($event->event_booth_map));
     }
 
-    public function destroy(Event $event)
-    {
-        // Hapus file map jika ada
-        if ($event->event_booth_map && file_exists(public_path($event->event_booth_map))) {
-            unlink(public_path($event->event_booth_map));
-        }
+    $event->delete();
 
-        $event->delete();
-
-        return redirect()
-            ->route('admin.events.index')
-            ->with('success', 'Event successfully deleted!');
-    }
+    return redirect()
+      ->route('admin.events.index')
+      ->with('success', 'Event successfully deleted!');
+  }
 }

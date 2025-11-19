@@ -18,6 +18,7 @@ class Event extends Model
         'organizer_name',
         'description',
         'event_booth_map',
+        'cover',
     ];
 
     public function booths()
