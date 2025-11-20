@@ -20,6 +20,8 @@ class EventListingController extends Controller
 
     public function show(Event $event)
     {
+        $event->load('booths'); // Load all booths for the map
+
         return view('events.show', compact('event'));
     }
 }
