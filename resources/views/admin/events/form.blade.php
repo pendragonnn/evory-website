@@ -54,7 +54,7 @@
                     <div>
                         <label class="font-semibold">Event Booth Map</label>
                         <input type="file" name="event_booth_map" class="mt-1 w-full border-gray-300 rounded">
-                        @if($event->event_booth_map)
+                        @if(!empty($event->event_booth_map))
                             <p class="text-sm text-gray-600 mt-1">Current: {{ $event->event_booth_map }}</p>
                         @endif
                     </div>
@@ -62,7 +62,7 @@
                     <div>
                         <label class="font-semibold">Cover</label>
                         <input type="file" name="cover" class="mt-1 w-full border-gray-300 rounded">
-                        @if($event->cover)
+                        @if(!empty($event->cover))
                             <p class="text-sm text-gray-600 mt-1">Current: {{ $event->cover }}</p>
                         @endif
                     </div>
@@ -76,17 +76,21 @@
                     <div id="booth-wrapper" class="space-y-4">
 
                         @php
+                            // safe initialization:
+                            // - prefer old('booths') if validation failed
+                            // - else if editing an existing event, use its booths (toArray)
+                            // - otherwise empty array
                             $booths = old('booths', $event->id ? $event->booths->toArray() : []);
                         @endphp
 
                         @foreach ($booths as $i => $booth)
                             <div class="booth-item p-4 border rounded-md bg-gray-50">
 
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 
                                     <div>
                                         <label class="text-sm font-semibold">Booth Code</label>
-                                        <input type="text" name="booths[{{ $i }}][booth_code]" value="{{ $booth['booth_code'] }}"
+                                        <input type="text" name="booths[{{ $i }}][booth_code]" value="{{ $booth['booth_code'] ?? '' }}"
                                                class="mt-1 w-full border-gray-300 rounded" required>
                                     </div>
 
@@ -104,22 +108,32 @@
 
                                     <div>
                                         <label class="text-sm font-semibold">Price</label>
-                                        <input type="number" name="booths[{{ $i }}][price]" value="{{ $booth['price'] }}"
+                                        <input type="number" name="booths[{{ $i }}][price]" value="{{ $booth['price'] ?? '' }}"
                                                class="mt-1 w-full border-gray-300 rounded" required>
                                     </div>
 
                                     <div>
                                         <label class="text-sm font-semibold">Available From</label>
                                         <input type="date" name="booths[{{ $i }}][available_start_date]"
-                                               value="{{ $booth['available_start_date'] }}"
+                                               value="{{ $booth['available_start_date'] ?? '' }}"
                                                class="mt-1 w-full border-gray-300 rounded" required>
                                     </div>
 
                                     <div>
                                         <label class="text-sm font-semibold">Available Until</label>
                                         <input type="date" name="booths[{{ $i }}][available_end_date]"
-                                               value="{{ $booth['available_end_date'] }}"
+                                               value="{{ $booth['available_end_date'] ?? '' }}"
                                                class="mt-1 w-full border-gray-300 rounded" required>
+                                    </div>
+
+                                    <div>
+                                        <label class="text-sm font-semibold">Status</label>
+                                        <select name="booths[{{ $i }}][status]" class="mt-1 w-full border-gray-300 rounded">
+                                            <option value="available"   {{ (isset($booth['status']) && $booth['status'] === 'available') ? 'selected' : '' }}>Available</option>
+                                            <option value="booked"      {{ (isset($booth['status']) && $booth['status'] === 'booked') ? 'selected' : '' }}>Booked</option>
+                                            <option value="unavailable" {{ (isset($booth['status']) && $booth['status'] === 'unavailable') ? 'selected' : '' }}>Unavailable</option>
+                                            <option value="reserved"    {{ (isset($booth['status']) && $booth['status'] === 'reserved') ? 'selected' : '' }}>Reserved</option>
+                                        </select>
                                     </div>
 
                                 </div>
@@ -157,7 +171,7 @@
     <template id="booth-template">
         <div class="booth-item p-4 border rounded-md bg-gray-50">
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 
                 <div>
                     <label class="text-sm font-semibold">Booth Code</label>
@@ -195,6 +209,16 @@
                            class="mt-1 w-full border-gray-300 rounded" required>
                 </div>
 
+                <div>
+                    <label class="text-sm font-semibold">Status</label>
+                    <select name="booths[__i__][status]" class="mt-1 w-full border-gray-300 rounded">
+                        <option value="available">Available</option>
+                        <option value="booked">Booked</option>
+                        <option value="unavailable">Unavailable</option>
+                        <option value="reserved">Reserved</option>
+                    </select>
+                </div>
+
             </div>
 
             <button type="button"
@@ -206,7 +230,8 @@
     </template>
 
     <script>
-        let index = {{ count($booths) }};
+        // ensure $booths is available and is an array in Blade context
+        let index = {{ is_array($booths) ? count($booths) : 0 }};
 
         document.getElementById('add-booth').addEventListener('click', () => {
             let template = document.getElementById('booth-template').innerHTML;

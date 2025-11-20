@@ -41,6 +41,7 @@ class EventController extends Controller
             'description'    => 'nullable|string',
             'event_booth_map' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'cover'          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+
             'booths'                     => 'nullable|array',
             'booths.*.booth_code'        => 'required|string|max:50',
             'booths.*.type'              => 'nullable|string|max:100',
@@ -48,6 +49,7 @@ class EventController extends Controller
             'booths.*.price'             => 'required|numeric|min:0',
             'booths.*.available_start_date' => 'required|date',
             'booths.*.available_end_date'   => 'required|date|after_or_equal:booths.*.available_start_date',
+            'booths.*.status'            => 'required|in:available,booked,unavailable,reserved',
         ]);
 
         // STEP 1 — Create event WITHOUT files
@@ -84,7 +86,7 @@ class EventController extends Controller
                     'price' => $booth['price'],
                     'available_start_date' => $booth['available_start_date'],
                     'available_end_date' => $booth['available_end_date'],
-                    'status' => 'available',
+                    'status' => $booth['status'] ?? 'available',
                 ]);
             }
         }
@@ -119,6 +121,7 @@ class EventController extends Controller
             'description'    => 'nullable|string',
             'event_booth_map' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
             'cover'          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+
             'booths'                     => 'nullable|array',
             'booths.*.booth_code'        => 'required|string|max:50',
             'booths.*.type'              => 'nullable|string|max:100',
@@ -126,6 +129,7 @@ class EventController extends Controller
             'booths.*.price'             => 'required|numeric|min:0',
             'booths.*.available_start_date' => 'required|date',
             'booths.*.available_end_date'   => 'required|date|after_or_equal:booths.*.available_start_date',
+            'booths.*.status'            => 'required|in:available,booked,unavailable,reserved',
         ]);
 
         // STEP 1 — Update event data (except files & booths)
@@ -160,10 +164,8 @@ class EventController extends Controller
         }
 
         // STEP 4 — Replace booths
-        // delete existing booths
         $event->booths()->delete();
 
-        // insert new booths
         if (!empty($validated['booths'])) {
             foreach ($validated['booths'] as $booth) {
                 Booth::create([
@@ -174,7 +176,7 @@ class EventController extends Controller
                     'price' => $booth['price'],
                     'available_start_date' => $booth['available_start_date'],
                     'available_end_date' => $booth['available_end_date'],
-                    'status' => 'available',
+                    'status' => $booth['status'] ?? 'available',
                 ]);
             }
         }
@@ -187,22 +189,15 @@ class EventController extends Controller
 
     public function destroy(Event $event)
     {
-        // Hapus event map file jika ada
         if ($event->event_booth_map && file_exists(public_path($event->event_booth_map))) {
             unlink(public_path($event->event_booth_map));
         }
 
-        // Hapus cover file jika ada
         if ($event->cover && file_exists(public_path($event->cover))) {
             unlink(public_path($event->cover));
         }
 
-        // Hapus semua booths terkait event ini
-        foreach ($event->booths as $booth) {
-            $booth->delete(); // soft delete
-        }
-
-        // Hapus event (soft delete)
+        $event->booths()->delete();
         $event->delete();
 
         return redirect()
