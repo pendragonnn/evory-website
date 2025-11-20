@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\EventListingController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+// ==========================
+// PUBLIC EVENT LISTING ROUTES
+// ==========================
+Route::get('/events', [EventListingController::class, 'index'])->name('events.index');
+Route::get('/events/{event}', [EventListingController::class, 'show'])->name('events.show');
 
 // ==========================
 // ADMIN ROUTES
